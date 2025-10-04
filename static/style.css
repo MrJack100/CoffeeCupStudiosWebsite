@@ -1,0 +1,153 @@
+body {
+  margin: 0px;
+  padding: 0px;
+  font-family: "Roboto", sans-serif;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+	--text: #0e0906;
+	--background: #f9f4f1;
+	--primary: #fa9547;
+	--secondary: #5f668c;
+	--accent: #989bae;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+	--text: #f9f5f1;
+	--background: #0e0906;
+	--primary: #b85205;
+	--secondary: #737aa0;
+	--accent: #515467;
+  }
+}
+
+#navbar-section {
+  background-color: var(--secondary);
+  padding: 15px;
+  display: flex;
+  justify-content: left;
+}
+
+#navbar-section a {
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--background);
+  padding: 15px;
+}
+
+#header-section {
+  display: flex;
+  justify-content: center;
+  background-color: var(--background);
+  padding: 25px;
+}
+
+#header-section h1 {
+  padding: 25px;
+  color: var(--text);
+}
+
+#information-section {
+  padding: 25px;
+  background-color: var(--background);
+  color: var(--text);
+}
+
+#information-section h2 {
+  display: flex;
+  justify-content: center;
+}
+
+#server-section {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 20px;
+  background-color: var(--background);
+}
+
+#server-list {
+  opacity: 0;
+  color: var(--text);
+  padding: 25px;
+}
+
+.server {
+  background-color: var(--primary);
+  border-radius: 15px;
+  padding: 25px;
+}
+
+.server span {
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.server #online-count {
+  display: flex;
+  flex-direction: row;
+  align-items: end;
+}
+
+.server #primary-info {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-around;
+}
+
+#statistics-section {
+  color: var(--text);
+  padding: 25px;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+}
+
+#statistics-container {
+	display: flex;
+	justify-content: center;
+}
+
+#statContainer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: calc((50vw / 3) * 1);
+  justify-content: space-around;
+  gap: 5px;
+  width: 50vw;
+}
+
+.stat {
+  border-radius: 15px;
+  padding: 25px;
+}
+
+.light-stat {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+.dark-stat {
+  background-color: var(--secondary);
+  color: var(--background);
+}
+
+.small {
+  grid-column: span 1;
+}
+
+.medium {
+  grid-column: span 2;
+}
+
+.large {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+
+#graph img {
+  width: 100%;
+}
