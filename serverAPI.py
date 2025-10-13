@@ -2,6 +2,25 @@ import requests, json, time, math
 from termcolor import colored
 import pandas as pd
 from player import Player
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon
+
+# Get hitboxes
+with open("hitboxes.json", "r") as file:
+    hitboxes = json.loads(file.read())
+hitbox_list = []
+for hitbox in hitboxes:
+    x1 = hitbox["hitbox"]["coordinate1"]["x"]
+    x2 = hitbox["hitbox"]["coordinate2"]["x"]
+    x3 = hitbox["hitbox"]["coordinate3"]["x"]
+    x4 = hitbox["hitbox"]["coordinate4"]["x"]
+    y1 = hitbox["hitbox"]["coordinate1"]["y"]
+    y2 = hitbox["hitbox"]["coordinate2"]["y"]
+    y3 = hitbox["hitbox"]["coordinate3"]["y"]
+    y4 = hitbox["hitbox"]["coordinate4"]["y"]
+    bounding_box = Polygon([(x1,y1), (x2,y2), (x3,y3),(x4, y4)])
+    hitbox.update({"hitbox": {"bounding_box": bounding_box, "top_z": hitbox["hitbox"]["top_z"], "bottom_z": hitbox["hitbox"]["bottom_z"]}})
+    hitbox_list.append(hitbox)
 
 def get_player_data():
     d = requests.get("http://108.248.215.239:25560/getPlayer")
@@ -66,8 +85,6 @@ def update_player_info(player_object_list):
     returning_player_list = []
     for player_data in player_data_list:
         if player_data["name"] != "":
-            print(player_data)
-            print(player_object_list)
             match_made = False
             for player_object in player_object_list:
                 if player_object.name == player_data["name"]: # match made
@@ -91,50 +108,48 @@ def update_player_info(player_object_list):
             returning_player_list.append(player_object)
     return(returning_player_list)
 
-def apply_hitbox_tags(player_list, hitboxes):
+def apply_values(player, hitbox_data, event):
+    hitbox_name = hitbox_data["name"]
+    new_row = lambda player,stat,increment:pd.DataFrame({"name": [player.name], stat: increment})
+    # Fell out of tower
+    if (hitbox_name == "entire_tower_fail") and (event == "leave"):
+        return(new_row(player, "entire_tower_fail", 1))
+    if (hitbox_name == "level_01_spin") and (event == "enter"):
+        return(new_row(player, "level_01_spin", 1))
+
+def apply_hitbox_tags(player_list, data):
     for player in player_list:
-        # Ensure player is inside the tower
-        x_axis, y_axis = False, False
-        if (player.coordinates["x"] > 14397.377902408776) and (player.coordinates["x"] < 31124.373651582413):
-            x_axis = True
-        else:
-            x_axis = False
-        if (player.coordinates["y"] > -28309.481527612134) and (player.coordinates["y"] < -23845.810039281783):
-            y_axis = True
-        else:
-            y_axis = False
-        if x_axis and y_axis:
-            # Check hitboxes
-            for hitbox in hitboxes:
-                if player.coordinates["z"] >= hitbox["height"]:
-                    if hitbox in player.tags:
-                        pass
-                    else:
-                        player.tags.append(hitbox)
-                elif player.coordinates["z"] < hitbox["height"]:
-                    if hitbox in player.tags:
-                        player.tags.remove(hitbox)
-                        player.fail_counter += 1
-                    else:
-                        pass
+        for hitbox in hitboxes:
+            player_point = Point(player.coordinates["x"], player.coordinates["y"])
+            intersecting_z = False
+            intersecting_xy = hitbox["hitbox"]["bounding_box"].contains(player_point)
+            if (player.coordinates["z"] > hitbox["hitbox"]["bottom_z"]) and (player.coordinates["z"] <= hitbox["hitbox"]["top_z"]):
+                intersecting_z = True
+            print(colored(f"{hitbox["name"]}, {intersecting_xy}, {intersecting_z}", "light_yellow"))
+            if intersecting_xy and intersecting_z: # Add/keep tag
+                if hitbox in player.tags:
+                    new_row = apply_values(player=player, hitbox_data=hitbox, event="inside")
+                    data = pd.concat([data, new_row], ignore_index=True)
                 else:
-                    pass
-            # {'coordinates': {'x': 31124.373651582413, 'y': -28309.481527612134, 'z': 63265.1396852457}, 'moving': False, 'name': 'Aquatic'}
-            # {'coordinates': {'x': 14397.377902408776, 'y': -23845.810039281783, 'z': 63265.13970277222}, 'moving': False, 'name': 'Aquatic'}
-            dx = (22707.163884883645 - player.coordinates["x"])
-            dy = (-26036.91355881732 - player.coordinates["y"])
-            distance_from_centre_radius = math.sqrt((dx ** 2) + (dy ** 2))
-            if distance_from_centre_radius >= 18000:
-                player.tags.append({"name": "killzone", "height": None})
-        else:
-            pass
+                    player.tags.append(hitbox)
+                    new_row = apply_values(player=player, hitbox_data=hitbox, event="enter")
+                    data = pd.concat([data, new_row], ignore_index=True)
+            else: # Remove/ignore tag
+                if hitbox in player.tags:
+                    player.tags.remove(hitbox)
+                    new_row = apply_values(player=player, hitbox_data=hitbox, event="leave")
+                    data = pd.concat([data, new_row], ignore_index=True)
+                else:
+                    new_row = apply_values(player=player, hitbox_data=hitbox, event="outside")
+                    data = pd.concat([data, new_row], ignore_index=True)
+    return(data)
 
 def clear_disconnected(player_list, data):
     returning_player_list = []
     for player in player_list:
         if (time.time() - player.last_seen_timestamp) >= 3: # Player has disconnected!
-            new_row = pd.DataFrame({"name": [player.name], "fails": [player.fail_counter]})
-            data = pd.concat([data, new_row])   
+            new_row = pd.DataFrame({"name": [player.name], "entire_tower_fail": [player.fail_counter]})
+            data = pd.concat([data, new_row], ignore_index=True)   
             print(colored(f"Player with name {player.name} has disconnected", "light_blue"))
         else:
             returning_player_list.append(player)
@@ -145,9 +160,10 @@ def cycle(seconds, interval, player_object_list, data):
         print(colored("Begin Cycle", "light_green"))
         player_object_list, data = clear_disconnected(player_object_list, data)
         player_object_list = update_player_info(player_object_list)
-        apply_hitbox_tags(player_object_list, hitboxes=[{"name": "level01", "height": 17116.406155571487}, {"name": "level00", "height": 13561.826156406483}])
+        data = apply_hitbox_tags(player_object_list, data)
+        print(player_object_list[0].coordinates)
+        print(player_object_list[0].tags)
         print(colored("End Cycle", "dark_grey"))
-        print(player_object_list)
         time.sleep(interval)
     return(player_object_list, data)
 
@@ -156,14 +172,15 @@ data = pd.read_csv("data.csv")
 while True:
     # Run for 20 seconds with 1 second intervals
     player_object_list, data = cycle(5, 1, player_object_list, data)
-    for player in player_object_list: # This doesn't duplicate disconnected players because they are removed
+    ''' for player in player_object_list: # This doesn't duplicate disconnected players because they are removed
         if hasattr(player, "last_logged_fail_counter"): # This is so we don't add the previous fails
             delta = player.fail_counter - player.last_logged_fail_counter
         else:
             delta = player.fail_counter
         player.last_logged_fail_counter = player.fail_counter
-        new_row = pd.DataFrame({"name": [player.name], "fails": [delta]})
-        data = pd.concat([data, new_row])
+        new_row = pd.DataFrame({"name": [player.name], "tower_fails": [delta]})
+        data = pd.concat([data, new_row])'''
     # Clear up database
-    grouped = data.groupby("name", as_index=False)["fails"].sum()
+    column_to_group = ["entire_tower_fail", "level_01_spin"]
+    grouped = data.groupby("name", as_index=False)[column_to_group].sum()
     grouped.to_csv("data.csv", index=False)
