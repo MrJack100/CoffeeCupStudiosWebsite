@@ -1,0 +1,18 @@
+[
+    {
+        "name": "Server 1",
+        "online": "12",
+        "capacity": "24",
+        "ip": "127.0.0.1",
+        "port": "1324",
+        "password": "anotheruser"
+    },
+    {
+        "name": "Server 2",
+        "online": "15",
+        "capacity": "24",
+        "ip": "127.0.0.1",
+        "port": "1324",
+        "password": "milk"
+    }
+]

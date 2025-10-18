@@ -1,9 +1,13 @@
 from flask import Flask, render_template
-import time
+import time, threading
+import pandas as pd
 
 app = Flask(__name__)
 
-menu_script = '''<script>
+menu_head = '''
+    <link rel="stylesheet" href="static/menu.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=menu"/>
+    <script>
         function openMenu() {
             var x = document.getElementById("menu-mobile");
             if (x.style.display === "flex") {
@@ -14,7 +18,7 @@ menu_script = '''<script>
         } 
     </script>'''
 
-menu_html = '''<section id="navbar-section">
+menu_body = '''<section id="navbar-section">
         <span onclick="openMenu()" class="material-symbols-outlined">
             menu
         </span>
@@ -25,26 +29,32 @@ menu_html = '''<section id="navbar-section">
             <a class="menu-component" href="/submitlevel">Submit Level</a>
         </div>
     </section>
-    <section id="information-section">
-        <div>
-            <p>
-                Hello Pioneers, John Coffee Cup from Coffee Cup Studios here. I've just learned that Coffee Stain
-                Studios will be releasing their game on console this November. This will give them a huge leg up in the
-                market, so we will have to respond. I believe the best way to ensure a victory over the “Stainers” is to
-                build a giant obstacle-course tower and race factory carts to the top.</br></br>
-                -John Coffee Cup (Founder & CEO)</p>
-            <a href="/eventinfo">Event Information</a>
-        </div>
-    </section>'''
+    '''
+
+# Global variables
+global entire_tower_fail
+
+def get_globals():
+    while True:
+        # Get global stats
+        global_data = pd.read_csv("global_data.csv")
+        global entire_tower_fail
+        entire_tower_fail = int(global_data["entire_tower_fail"][0])
+
+        # Get server list
+        
+        time.sleep(15)
+
+x = threading.Thread(target=get_globals)
+x.start()
 
 @app.route("/")
 def root():
-    return render_template("index.html", menu_script=menu_script, menu_html=menu_html)
+    return render_template("index.html", menu_head=menu_head, menu_body=menu_body)
 
 @app.route("/data")
 def data():
-    number = time.ctime()
-    return render_template("data.html", time=number)
+    return render_template("data.html", entire_tower_fail=entire_tower_fail)
 
 @app.route("/serverlist")
 def server_list():
@@ -63,7 +73,7 @@ def server_list():
 
 @app.route("/eventinfo")
 def event_info():
-    return render_template("eventinfo.html", discord_link="https://discord.gg/Ywa4jfn8hG", menu_script=menu_script, menu_html=menu_html)
+    return render_template("eventinfo.html", discord_link="https://discord.gg/Ywa4jfn8hG", menu_head=menu_head, menu_body=menu_body)
 
 @app.route("/submitlevel")
 def submit_level():
@@ -72,11 +82,11 @@ def submit_level():
         open = True
     else:
         open = False
-    return render_template("submitlevel.html", form_link="https://docs.google.com/forms/d/e/1FAIpQLSdY048SsmOonBgR_u5R6QDFcViwNoxHHw9A2rOjmMCeTds4Rw/viewform", open=open, menu_script=menu_script, menu_html=menu_html)
+    return render_template("submitlevel.html", form_link="https://docs.google.com/forms/d/e/1FAIpQLSdY048SsmOonBgR_u5R6QDFcViwNoxHHw9A2rOjmMCeTds4Rw/viewform", open=open, menu_head=menu_head, menu_body=menu_body)
 
 @app.route("/serverhelp")
 def server_help():
-    return render_template("serverhelp.html", discord_link="https://discord.gg/Ywa4jfn8hG", menu_script=menu_script, menu_html=menu_html)
+    return render_template("serverhelp.html", discord_link="https://discord.gg/Ywa4jfn8hG", menu_head=menu_head, menu_body=menu_body)
 
 if __name__ == "__main__":
     app.run(debug=True)

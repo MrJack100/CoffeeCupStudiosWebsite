@@ -110,14 +110,17 @@ def update_player_info(player_object_list):
 
 def apply_values(player, hitbox_data, event):
     hitbox_name = hitbox_data["name"]
-    new_row = lambda player,stat,increment:pd.DataFrame({"name": [player.name], stat: increment})
+    new_player_row = lambda player,stat,increment:pd.DataFrame({"name": [player.name], stat: [increment]})
+    new_global_row = lambda stat,increment:pd.DataFrame({stat: [increment]})
+    create_rows = lambda player,stat,increment:[new_player_row(player, stat, increment), new_global_row(stat, increment)]
     # Fell out of tower
     if (hitbox_name == "entire_tower_fail") and (event == "leave"):
-        return(new_row(player, "entire_tower_fail", 1))
+        return(create_rows(player, "entire_tower_fail", 1))
     if (hitbox_name == "level_01_spin") and (event == "enter"):
-        return(new_row(player, "level_01_spin", 1))
+        return(create_rows(player, "level_01_spin", 1))
+    return(None)
 
-def apply_hitbox_tags(player_list, data):
+def apply_hitbox_tags(player_list, player_data, global_data):
     for player in player_list:
         for hitbox in hitboxes:
             player_point = Point(player.coordinates["x"], player.coordinates["y"])
@@ -128,50 +131,66 @@ def apply_hitbox_tags(player_list, data):
             print(colored(f"{hitbox["name"]}, {intersecting_xy}, {intersecting_z}", "light_yellow"))
             if intersecting_xy and intersecting_z: # Add/keep tag
                 if hitbox in player.tags:
-                    new_row = apply_values(player=player, hitbox_data=hitbox, event="inside")
-                    data = pd.concat([data, new_row], ignore_index=True)
+                    response = apply_values(player=player, hitbox_data=hitbox, event="inside")
+                    if response != None:
+                        new_player_row, new_global_row = response
+                        player_data = pd.concat([player_data, new_player_row], ignore_index=True)
+                        global_data = pd.concat([global_data, new_global_row], ignore_index=True)
                 else:
                     player.tags.append(hitbox)
-                    new_row = apply_values(player=player, hitbox_data=hitbox, event="enter")
-                    data = pd.concat([data, new_row], ignore_index=True)
+                    response = apply_values(player=player, hitbox_data=hitbox, event="enter")
+                    if response != None:
+                        new_player_row, new_global_row = response
+                        player_data = pd.concat([player_data, new_player_row], ignore_index=True)
+                        global_data = pd.concat([global_data, new_global_row], ignore_index=True)
             else: # Remove/ignore tag
                 if hitbox in player.tags:
                     player.tags.remove(hitbox)
-                    new_row = apply_values(player=player, hitbox_data=hitbox, event="leave")
-                    data = pd.concat([data, new_row], ignore_index=True)
+                    response = apply_values(player=player, hitbox_data=hitbox, event="leave")
+                    if response != None:
+                        new_player_row, new_global_row = response
+                        player_data = pd.concat([player_data, new_player_row], ignore_index=True)
+                        global_data = pd.concat([global_data, new_global_row], ignore_index=True)
+                        print(global_data)
                 else:
-                    new_row = apply_values(player=player, hitbox_data=hitbox, event="outside")
-                    data = pd.concat([data, new_row], ignore_index=True)
-    return(data)
+                    response = apply_values(player=player, hitbox_data=hitbox, event="outside")
+                    if response != None:
+                        new_player_row, new_global_row = response
+                        player_data = pd.concat([player_data, new_player_row], ignore_index=True)
+                        global_data = pd.concat([global_data, new_global_row], ignore_index=True)
+    return(player_data, global_data)
 
-def clear_disconnected(player_list, data):
+def clear_disconnected(player_list, player_data, global_data):
     returning_player_list = []
     for player in player_list:
         if (time.time() - player.last_seen_timestamp) >= 3: # Player has disconnected!
-            new_row = pd.DataFrame({"name": [player.name], "entire_tower_fail": [player.fail_counter]})
-            data = pd.concat([data, new_row], ignore_index=True)   
+            new_player_row = pd.DataFrame({"name": [player.name], "entire_tower_fail": [player.fail_counter]})
+            new_global_row = pd.DataFrame({"entire_tower_fail": [player.fail_counter]})
+            player_data = pd.concat([player_data, new_player_row], ignore_index=True)
+            global_data = pd.concat([global_data, new_global_row], ignore_index=True)
             print(colored(f"Player with name {player.name} has disconnected", "light_blue"))
         else:
             returning_player_list.append(player)
-    return(returning_player_list, data)
+    return(returning_player_list, player_data, global_data)
 
-def cycle(seconds, interval, player_object_list, data):
+def cycle(seconds, interval, player_object_list, player_data, global_data):
     for _ in range(seconds):
         print(colored("Begin Cycle", "light_green"))
-        player_object_list, data = clear_disconnected(player_object_list, data)
+        player_object_list, player_data, global_data = clear_disconnected(player_object_list, player_data, global_data)
         player_object_list = update_player_info(player_object_list)
-        data = apply_hitbox_tags(player_object_list, data)
-        print(player_object_list[0].coordinates)
-        print(player_object_list[0].tags)
+        player_data, global_data = apply_hitbox_tags(player_object_list, player_data, global_data)
+        for player in player_object_list:
+            print(colored(f"{player.name} at {player.coordinates}", "light_yellow"))
         print(colored("End Cycle", "dark_grey"))
-        time.sleep(interval)
-    return(player_object_list, data)
+        time.sleep(interval)    
+    return(player_object_list, player_data, global_data)
 
 player_object_list = []
-data = pd.read_csv("data.csv")
+player_data = pd.read_csv("player_data.csv")
+global_data = pd.read_csv("global_data.csv")
 while True:
-    # Run for 20 seconds with 1 second intervals
-    player_object_list, data = cycle(5, 1, player_object_list, data)
+    # Run for X seconds with Y second intervals
+    player_object_list, player_data, global_data = cycle(15, 0.5, player_object_list, player_data, global_data)
     ''' for player in player_object_list: # This doesn't duplicate disconnected players because they are removed
         if hasattr(player, "last_logged_fail_counter"): # This is so we don't add the previous fails
             delta = player.fail_counter - player.last_logged_fail_counter
@@ -180,7 +199,25 @@ while True:
         player.last_logged_fail_counter = player.fail_counter
         new_row = pd.DataFrame({"name": [player.name], "tower_fails": [delta]})
         data = pd.concat([data, new_row])'''
-    # Clear up database
+    # Clear up player database
     column_to_group = ["entire_tower_fail", "level_01_spin"]
-    grouped = data.groupby("name", as_index=False)[column_to_group].sum()
-    grouped.to_csv("data.csv", index=False)
+    grouped = player_data.groupby("name", as_index=False)[column_to_group].sum()
+    grouped.to_csv("player_data.csv", index=False)
+    # Clear up global database
+    column_to_group = ["entire_tower_fail", "level_01_spin"]
+
+    # Group and sum by player name
+    grouped = player_data.groupby("name", as_index=False)[column_to_group].sum()
+
+    # Overwrite file (keeps headers, clears old rows)
+    grouped.to_csv("player_data.csv", index=False)
+    player_data = grouped.copy()
+
+    # --- AI GENERATED CODE ---
+    # Sum up all numeric columns, keep headers, and reset data to just that row
+    sum_row = global_data.sum(numeric_only=True)
+    sum_df = pd.DataFrame([sum_row], columns=global_data.columns)  # ensure same column names
+    global_data = sum_df.copy()
+
+    # Save with headers intact
+    global_data.to_csv("global_data.csv", index=False)
