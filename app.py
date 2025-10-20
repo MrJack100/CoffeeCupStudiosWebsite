@@ -1,5 +1,5 @@
 from flask import Flask, render_template
-import time, threading
+import time, threading, json
 import pandas as pd
 
 app = Flask(__name__)
@@ -19,20 +19,24 @@ menu_head = '''
     </script>'''
 
 menu_body = '''<section id="navbar-section">
-        <span onclick="openMenu()" class="material-symbols-outlined">
-            menu
-        </span>
-        <p id="header">Coffee Cup Studios</p>
-        <div id="menu-mobile">
-            <p class="menu-component" id="header">Coffee Cup Studios</p>
-            <a class="menu-component" href="#">Mod Installer</a>
-            <a class="menu-component" href="/submitlevel">Submit Level</a>
+        <div id="subdiv">
+            <span onclick="openMenu()" class="material-symbols-outlined">
+                menu
+            </span>
+            <a href="/" id="header">Coffee Cup Studios</a>
+            <div id="menu-mobile">
+                <p class="menu-component" id="header">Coffee Cup Studios</p>
+                <a class="menu-component" href="#">Mod Installer</a>
+                <a class="menu-component" href="/submitlevel">Submit Level</a>
+                <a class="menu-component" href="/eventinfo">Event Information</a>
+            </div>
         </div>
     </section>
     '''
 
 # Global variables
 global entire_tower_fail
+global servers
 
 def get_globals():
     while True:
@@ -42,8 +46,11 @@ def get_globals():
         entire_tower_fail = int(global_data["entire_tower_fail"][0])
 
         # Get server list
+        global servers
+        with open("server_data.json") as file:
+            servers = json.loads(file.read())
         
-        time.sleep(15)
+        time.sleep(10)
 
 x = threading.Thread(target=get_globals)
 x.start()
@@ -58,7 +65,7 @@ def data():
 
 @app.route("/serverlist")
 def server_list():
-    servers = [{"name": "Server 1", "online": "12", "capacity": "24", "ip": "127.0.0.1", "port": "1324", "password": "anotheruser"}, {"name": "Server 2", "online": "15", "capacity": "24", "ip": "127.0.0.1", "port": "1324", "password": "milk"}]
+    #servers = [{"name": "Server 1", "online": "12", "capacity": "24", "ip": "127.0.0.1", "port": "1324", "password": "anotheruser"}, {"name": "Server 2", "online": "15", "capacity": "24", "ip": "127.0.0.1", "port": "1324", "password": "milk"}]
     rendered_servers = ""
     for server in servers:
         percentage = (int(server["online"]) / int(server["capacity"])) * 100
@@ -68,7 +75,7 @@ def server_list():
             colour = "amber"
         else:
             colour = "red"
-        rendered_servers = rendered_servers + f"{(render_template("serverlist.html", name=server["name"], online=server["online"], ip=server["ip"], port=server["port"], password=server["password"], percentage=percentage, colour=colour))}"
+        rendered_servers = rendered_servers + f"{(render_template("serverlist.html", name=server["name"], online=server["online"], capacity=server["capacity"], ip=server["ip"], port=server["port"], password=server["password"], percentage=percentage, colour=colour))}"
     return rendered_servers
 
 @app.route("/eventinfo")
@@ -77,8 +84,8 @@ def event_info():
 
 @app.route("/submitlevel")
 def submit_level():
-    # Delete this before November!
-    if (time.gmtime())[2] <= 15:
+    # Delete this before December!
+    if (time.gmtime())[2] <= 30:
         open = True
     else:
         open = False

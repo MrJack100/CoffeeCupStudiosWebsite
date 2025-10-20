@@ -1,18 +1,5 @@
-[
-    {
-        "name": "Server 1",
-        "online": "12",
-        "capacity": "24",
-        "ip": "127.0.0.1",
-        "port": "1324",
-        "password": "anotheruser"
-    },
-    {
-        "name": "Server 2",
-        "online": "15",
-        "capacity": "24",
-        "ip": "127.0.0.1",
-        "port": "1324",
-        "password": "milk"
-    }
-]
+[{"name": "Testing Server", "online": 23, "capacity": "24", "ip": "127.0.0.1", "port": "1324", "password": "anotheruser"},
+{"name": "Fun Server", "online": 2, "capacity": "8", "ip": "127.0.0.1", "port": "4721", "password": "aquatic"},
+{"name": "Server Server", "online": 19, "capacity": "32", "ip": "127.0.0.1", "port": "5729", "password": "doug"},
+{"name": "Speedrun Server", "online": 5, "capacity": "12", "ip": "127.0.0.1", "port": "7329", "password": "xtra"},
+{"name": "Main Server", "online": 11, "capacity": "48", "ip": "127.0.0.1", "port": "5821", "password": "nova"}]

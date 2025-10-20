@@ -1,9 +1,14 @@
+import grequests
 import requests, json, time, math
 from termcolor import colored
 import pandas as pd
 from player import Player
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
+
+servers = [
+    {"name": "Testing Server", "url": "http://108.248.215.239:25560/getPlayer"}
+]
 
 # Get hitboxes
 with open("hitboxes.json", "r") as file:
@@ -23,6 +28,44 @@ for hitbox in hitboxes:
     hitbox_list.append(hitbox)
 
 def get_player_data():
+    server_urls = [item["url"] for item in servers]
+    rs = (grequests.get(u) for u in server_urls)
+    #rs.encoding = rs.apparent_encoding
+    responses = (grequests.map(rs))
+    full_response = []
+    server_count_list = []
+    increment = 0
+    for response in responses:
+        server_data = servers[increment]
+        if response.status_code == 200:
+            json_response = json.loads(response.text)
+            server_count = len(json_response)
+            server_count_list.append({"name": server_data["name"], "online": server_count})
+            print(colored(server_count, "magenta"))
+            for x in json_response:
+                full_response.append(x)
+        else:
+            print(colored(f"Server with URL {server_data["url"]} has thrown Status {response.status_code}", "light_red"))
+        increment =+ 1
+    full_data = []
+    for player in full_response:
+        if player["Speed"] == 0:
+            moving = False
+        else:
+            moving = True
+        extracted_data = {
+            "coordinates": {
+                "x": player["location"]["x"],
+                "y": player["location"]["y"],
+                "z": player["location"]["z"]
+            },
+            "moving": moving,
+            "name": player["features"]["properties"]["name"]
+        }
+        full_data.append(extracted_data)
+    return(full_data, server_count_list)
+
+'''def get_player_data():
     d = requests.get("http://108.248.215.239:25560/getPlayer")
     d.encoding = d.apparent_encoding
     response = json.loads(d.text)
@@ -42,7 +85,7 @@ def get_player_data():
             "name": player["features"]["properties"]["name"]
         }
         full_data.append(extracted_data)
-    return(full_data)
+    return(full_data)'''
 
 def record_trigger(target_name:str):
     full_data = get_player_data()
@@ -80,8 +123,7 @@ def check_commands():
             print(f"New trigger created under name {name} at {new_trigger}")
 
 def update_player_info(player_object_list):
-    player_data_list = get_player_data()
-    print(colored(len(player_data_list), "magenta"))
+    player_data_list, server_count_list = get_player_data()
     returning_player_list = []
     for player_data in player_data_list:
         if player_data["name"] != "":
@@ -106,7 +148,7 @@ def update_player_info(player_object_list):
             pass
         else:
             returning_player_list.append(player_object)
-    return(returning_player_list)
+    return(returning_player_list, server_count_list)
 
 def apply_values(player, hitbox_data, event):
     hitbox_name = hitbox_data["name"]
@@ -177,20 +219,20 @@ def cycle(seconds, interval, player_object_list, player_data, global_data):
     for _ in range(seconds):
         print(colored("Begin Cycle", "light_green"))
         player_object_list, player_data, global_data = clear_disconnected(player_object_list, player_data, global_data)
-        player_object_list = update_player_info(player_object_list)
+        player_object_list, server_count_list = update_player_info(player_object_list)
         player_data, global_data = apply_hitbox_tags(player_object_list, player_data, global_data)
         for player in player_object_list:
             print(colored(f"{player.name} at {player.coordinates}", "light_yellow"))
         print(colored("End Cycle", "dark_grey"))
         time.sleep(interval)    
-    return(player_object_list, player_data, global_data)
+    return(player_object_list, player_data, global_data, server_count_list)
 
 player_object_list = []
 player_data = pd.read_csv("player_data.csv")
 global_data = pd.read_csv("global_data.csv")
 while True:
     # Run for X seconds with Y second intervals
-    player_object_list, player_data, global_data = cycle(15, 0.5, player_object_list, player_data, global_data)
+    player_object_list, player_data, global_data, server_count_list = cycle(5, 0.5, player_object_list, player_data, global_data)
     ''' for player in player_object_list: # This doesn't duplicate disconnected players because they are removed
         if hasattr(player, "last_logged_fail_counter"): # This is so we don't add the previous fails
             delta = player.fail_counter - player.last_logged_fail_counter
@@ -199,6 +241,17 @@ while True:
         player.last_logged_fail_counter = player.fail_counter
         new_row = pd.DataFrame({"name": [player.name], "tower_fails": [delta]})
         data = pd.concat([data, new_row])'''
+    if len(server_count_list) > 0:
+        with open("server_data.json", "r") as file:
+            current_file = json.loads(file.read())
+        increment = 0
+        for server in current_file:
+            print(server_count_list[increment])
+            print(server.update(server_count_list[increment]))
+            server.update(server_count_list[increment])
+            increment =+ 1
+        with open("server_data.json", "w") as file:
+            file.write(json.dumps(current_file))
     # Clear up player database
     column_to_group = ["entire_tower_fail", "level_01_spin"]
     grouped = player_data.groupby("name", as_index=False)[column_to_group].sum()

@@ -8,15 +8,26 @@
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js"
         integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ"
         crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=person" />
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=menu" />
+    <script>
+        function copyText(button) {
+            const span = button.previousElementSibling.querySelector('span');
+            if (!span) return console.error("No <span> found before button.");
+
+            const textToCopy = span.textContent.trim();
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                console.log("Copied:", textToCopy);
+                // Optional feedback
+                button.classList.add('copied');
+                setTimeout(() => button.classList.remove('copied'), 1000);
+            }).catch(err => {
+                console.error("Failed to copy text: ", err);
+            });
+        }
+    </script>
     <style>
         body {
             margin: 0px;
@@ -24,26 +35,57 @@
             font-family: "Roboto", sans-serif;
         }
     </style>
-    {{menu_script|safe}}
+    {{menu_head|safe}}
 </head>
-    
+
 <body>
-    {{menu_html|safe}}
-    <section id="live-information">
-        <div id="statistics-section">
-            <h2>Live Statistics</h2>
-            <div id="statistics-container">
-                <div hx-get="/data" hx-trigger="load, every 30s"></div>
+    {{menu_body|safe}}
+    <main>
+        <section id="information-section">
+            <div id="information-first-div">
+                <div id="start-quote" class="quote">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M18.3 6L16 10C17.1 10 18.0417 10.3917 18.825 11.175C19.6083 11.9583 20 12.9 20 14C20 15.1 19.6083 16.0417 18.825 16.825C18.0417 17.6083 17.1 18 16 18C14.9 18 13.9583 17.6083 13.175 16.825C12.3917 16.0417 12 15.1 12 14C12 13.6167 12.0458 13.2625 12.1375 12.9375C12.2292 12.6125 12.3667 12.3 12.55 12L16 6L18.3 6ZM9.3 6L7 10C8.1 10 9.04167 10.3917 9.825 11.175C10.6083 11.9583 11 12.9 11 14C11 15.1 10.6083 16.0417 9.825 16.825C9.04167 17.6083 8.1 18 7 18C5.9 18 4.95833 17.6083 4.175 16.825C3.39167 16.0417 3 15.1 3 14C3 13.6167 3.04583 13.2625 3.1375 12.9375C3.22917 12.6125 3.36667 12.3 3.55 12L7 6L9.3 6Z"
+                            fill="#CCCCCC" />
+                    </svg>
+                </div>
+                <div id="quote-text">
+                    <p>
+                        Hello Pioneers, John Coffee Cup from Coffee Cup Studios here. I've just learned that Coffee Stain
+                        Studios will be releasing their game on console this November. This will give them a huge leg up in
+                        the
+                        market, so we will have to respond. I believe the best way to ensure a victory over the “Stainers”
+                        is to
+                        build a giant obstacle-course tower and race factory carts to the top.</br></br>
+                        -John Coffee Cup (Founder & CEO)</p>
+                </div>
+                <div id="end-quote" class="quote">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M5.7 18L8 14C6.9 14 5.95833 13.6083 5.175 12.825C4.39167 12.0417 4 11.1 4 10C4 8.9 4.39167 7.95833 5.175 7.175C5.95833 6.39167 6.9 6 8 6C9.1 6 10.0417 6.39167 10.825 7.175C11.6083 7.95833 12 8.9 12 10C12 10.3833 11.9542 10.7375 11.8625 11.0625C11.7708 11.3875 11.6333 11.7 11.45 12L8 18H5.7ZM14.7 18L17 14C15.9 14 14.9583 13.6083 14.175 12.825C13.3917 12.0417 13 11.1 13 10C13 8.9 13.3917 7.95833 14.175 7.175C14.9583 6.39167 15.9 6 17 6C18.1 6 19.0417 6.39167 19.825 7.175C20.6083 7.95833 21 8.9 21 10C21 10.3833 20.9542 10.7375 20.8625 11.0625C20.7708 11.3875 20.6333 11.7 20.45 12L17 18H14.7Z"
+                            fill="#CCCCCC" />
+                    </svg>
+                </div>
             </div>
-        </div>
-        <div id="server-section">
-            <h2>Servers</h2>
-            <a href="/serverhelp">How to join a server?</a>
-            <div id="server-container">
-                <div hx-get="/serverlist" hx-trigger="load, every 30s"></div>
+        </section>
+        <section id="live-information">
+            <div id="statistics-section">
+                <h2>Live Statistics</h2>
+                <div id="statistics-container">
+                    <div hx-get="/data" hx-trigger="load, every 30s"></div>
+                </div>
             </div>
-        </div>
-    </section>
+            <div id="server-section">
+                <div id="server-header">
+                    <h2>Servers</h2>
+                    <a href="/serverhelp">How to join a server?</a>
+                </div>
+                <div id="server-container" hx-get="/serverlist" hx-trigger="load, every 30s">
+                </div>
+            </div>
+        </section>
+    </main>
 </body>
 
 </html>
