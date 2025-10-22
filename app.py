@@ -1,8 +1,17 @@
-from flask import Flask, render_template
+from wtforms import StringField, SubmitField
+from flask import Flask, render_template, redirect
+from flask_wtf import FlaskForm, CSRFProtect
+from wtforms.validators import DataRequired
 import time, threading, json
 import pandas as pd
 
 app = Flask(__name__)
+app.secret_key = "secretkey"
+csrf = CSRFProtect(app)
+
+class SearchForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired(), ])
+    submit = SubmitField("Search")
 
 menu_head = '''
     <link rel="stylesheet" href="static/menu.css">
@@ -55,9 +64,18 @@ def get_globals():
 x = threading.Thread(target=get_globals)
 x.start()
 
-@app.route("/")
+@app.route("/", methods=["GET", "POST"])
 def root():
-    return render_template("index.html", menu_head=menu_head, menu_body=menu_body)
+    '''form = SearchForm()
+    if form.validate_on_submit:
+        username = form.username.data
+        return redirect(f"/playerdata/{username}")'''
+    #return render_template("index.html", menu_head=menu_head, menu_body=menu_body, form=form, global_stats=True, username=None)
+    form = SearchForm()
+    if form.validate_on_submit:
+        username = form.username.data
+        return render_template("index.html", menu_head=menu_head, menu_body=menu_body, form=form, global_stats=False, username=username)
+    return render_template("index.html", menu_head=menu_head, menu_body=menu_body, form=form, global_stats=True, username=None)
 
 @app.route("/data")
 def data():
@@ -91,6 +109,16 @@ def submit_level():
         open = False
     return render_template("submitlevel.html", form_link="https://docs.google.com/forms/d/e/1FAIpQLSdY048SsmOonBgR_u5R6QDFcViwNoxHHw9A2rOjmMCeTds4Rw/viewform", open=open, menu_head=menu_head, menu_body=menu_body)
 
+@app.route("/playerdata/<username>", methods=["GET", "POST"])
+def playerdata(username):
+    player_data = pd.read_csv("player_data.csv")
+    not_present = not player_data["name"].str.lower().eq(username.lower()).any()
+    if not_present:
+        return render_template("data.html", entire_tower_fail=entire_tower_fail)
+    row = player_data[player_data["name"].str.lower() == username.lower()].squeeze()
+    player_entire_tower_fail = str(row["entire_tower_fail"])
+    return render_template("data.html", entire_tower_fail=player_entire_tower_fail)
+    
 @app.route("/serverhelp")
 def server_help():
     return render_template("serverhelp.html", discord_link="https://discord.gg/Ywa4jfn8hG", menu_head=menu_head, menu_body=menu_body)

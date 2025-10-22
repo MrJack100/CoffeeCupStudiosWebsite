@@ -52,10 +52,13 @@
                 </div>
                 <div id="quote-text">
                     <p>
-                        Hello Pioneers, John Coffee Cup from Coffee Cup Studios here. I've just learned that Coffee Stain
-                        Studios will be releasing their game on console this November. This will give them a huge leg up in
+                        Hello Pioneers, John Coffee Cup from Coffee Cup Studios here. I've just learned that Coffee
+                        Stain
+                        Studios will be releasing their game on console this November. This will give them a huge leg up
+                        in
                         the
-                        market, so we will have to respond. I believe the best way to ensure a victory over the “Stainers”
+                        market, so we will have to respond. I believe the best way to ensure a victory over the
+                        “Stainers”
                         is to
                         build a giant obstacle-course tower and race factory carts to the top.</br></br>
                         -John Coffee Cup (Founder & CEO)</p>
@@ -70,19 +73,33 @@
             </div>
         </section>
         <section id="live-information">
-            <div id="statistics-section">
-                <h2>Live Statistics</h2>
-                <div id="statistics-container">
-                    <div hx-get="/data" hx-trigger="load, every 30s"></div>
-                </div>
-            </div>
             <div id="server-section">
                 <div id="server-header">
                     <h2>Servers</h2>
-                    <a href="/serverhelp">How to join a server?</a>
+                    <a href="/serverhelp">How to join a server?</a> 
                 </div>
                 <div id="server-container" hx-get="/serverlist" hx-trigger="load, every 30s">
                 </div>
+            </div>
+            <div id="statistics-section">
+                <div id="statistics-header">
+                    {%if global_stats%}
+                    <h2>Live Statistics - Global</h2>
+                    {%else%}
+                    <h2>Live Statistics - {{username}}</h2>
+                    <a href="/">Back to Global Stats</a>
+                    {%endif%}
+                    <form action="/" method="post" novalidate>
+                        {{form.csrf_token}}
+                        {{form.username()}}
+                        {{form.submit()}}
+                    </form>
+                </div>
+                {%if global_stats%}
+                <div id="statistics-container" hx-get="/stats" hx-trigger="load, every 30s"></div>
+                {%else%}
+                <div id="statistics-container" hx-get="/playerdata/{{username}}" hx-trigger="load, every 30s"></div>
+                {%endif%}
             </div>
         </section>
     </main>
